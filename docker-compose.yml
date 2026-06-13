@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  mcp-filesystem-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp-filesystem-agent
+    restart: unless-stopped
+    environment:
+      - MCP_BASE_DIR=/workspace
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ${MCP_WORKSPACE_PATH:-./workspace}:/workspace
+    stdin_open: true
+    tty: true
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  mcp-network:
+    driver: bridge

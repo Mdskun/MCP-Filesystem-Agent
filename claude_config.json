@@ -1,0 +1,38 @@
+{
+  "tools": [
+    {
+      "name": "filesystem-agent",
+      "description": "Token-optimized filesystem agent for reading, writing, searching, and analyzing files with minimal token usage",
+      "version": "3.0.0",
+      "author": "Manthan",
+      "homepage": "https://github.com/Mdskun/mcp-fs-agent",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/Mdskun/mcp-fs-agent.git"
+      },
+      "license": "MIT",
+      "keywords": ["filesystem", "mcp", "files", "search", "code-analysis", "token-efficient"],
+      "capabilities": [
+        "file_reading",
+        "file_writing",
+        "file_searching",
+        "code_analysis",
+        "directory_navigation"
+      ],
+      "requirements": {
+        "python": ">=3.8",
+        "mcp": ">=0.4.0"
+      },
+      "configuration": {
+        "environment_variables": [
+          {
+            "name": "MCP_BASE_DIR",
+            "description": "Base directory for file operations (default: ~/Data/Repos)",
+            "required": false,
+            "example": "/home/user/projects"
+          }
+        ]
+      }
+    }
+  ]
+}
