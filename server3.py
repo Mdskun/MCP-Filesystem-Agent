@@ -42,7 +42,29 @@ logger = logging.getLogger(__name__)
 mcp = FastMCP("filesystem-agent")
 
 # Base directory - configurable via MCP_BASE_DIR environment variable
-BASE_DIR = Path(os.getenv("MCP_BASE_DIR", str(Path.home() / "Data/Repos"))).resolve()
+# Base directories - supports multiple paths
+# Priority: MCP_BASE_DIRS (comma-sep) > MCP_BASE_DIR (single) > default
+def _load_base_dirs():
+    """Load allowed base directories with fallback chain."""
+    # Priority 1: Multi-path env var (comma-separated)
+    multi_paths = os.getenv("MCP_BASE_DIRS")
+    if multi_paths:
+        paths = [Path(p.strip()).resolve() for p in multi_paths.split(",")]
+        logger.info(f"Loaded {len(paths)} base directories from MCP_BASE_DIRS")
+        return paths
+
+    # Priority 2: Single path env var (backward compatible)
+    single_path = os.getenv("MCP_BASE_DIR")
+    if single_path:
+        logger.info(f"Loaded single base directory from MCP_BASE_DIR")
+        return [Path(single_path).resolve()]
+
+    # Priority 3: Default
+    default = Path.home() / "Data/Repos"
+    logger.info(f"Using default base directory")
+    return [default.resolve()]
+
+BASE_DIRS = _load_base_dirs()
 
 # Token-efficiency settings
 MAX_RESULTS = 50
@@ -72,15 +94,29 @@ BINARY_EXTENSIONS = {
 # ========================
 
 def safe_path(path: str) -> Path:
-    """Ensure path is within BASE_DIR and symlink-safe."""
+    """Ensure path is within ANY BASE_DIR and symlink-safe."""
     try:
-        p = (BASE_DIR / path).resolve()
-        base_resolved = BASE_DIR.resolve()
+        # Try to resolve from each base directory
+        for base_dir in BASE_DIRS:
+            try:
+                p = (base_dir / path).resolve()
+                base_resolved = base_dir.resolve()
 
-        if not str(p).startswith(str(base_resolved)):
-            raise ValueError("Access denied: Path outside base directory")
+                if str(p).startswith(str(base_resolved)):
+                    return p
+            except:
+                continue
 
-        return p
+        # If no base directory matched, try as absolute path
+        p = Path(path).resolve()
+        for base_dir in BASE_DIRS:
+            if str(p).startswith(str(base_dir)):
+                return p
+
+        # Path not in any allowed directory
+        allowed = ", ".join(str(bd) for bd in BASE_DIRS)
+        raise ValueError(f"Access denied: Path outside allowed directories ({allowed})")
+
     except Exception as e:
         logger.error(f"Path validation error: {e}")
         raise
@@ -138,9 +174,16 @@ def get_function_signature(node) -> Optional[str]:
 
 
 def get_relative_path(path: Path) -> str:
-    """Get path relative to BASE_DIR."""
+    """Get path relative to any configured base directory."""
     try:
-        return str(path.relative_to(BASE_DIR.resolve()))
+        # Try each base directory
+        for bd in BASE_DIRS:
+            try:
+                return str(path.relative_to(bd.resolve()))
+            except:
+                continue
+        # If not relative to any base dir, return absolute path
+        return str(path)
     except:
         return str(path)
 
@@ -202,27 +245,232 @@ def ping() -> Dict[str, str]:
 
 @mcp.tool()
 def get_base_dir() -> Dict[str, Any]:
-    """Get the base directory configuration and status.
+    """Get base directory configuration and status.
 
     Returns:
-        Base directory path, existence status, and readability.
-        Set MCP_BASE_DIR environment variable to change this.
+        List of allowed base directories with status.
+        Set MCP_BASE_DIRS (comma-sep) or MCP_BASE_DIR environment variables.
     """
     try:
-        stat = BASE_DIR.stat()
+        directories = []
+        total_size = 0
+
+        for base_dir in BASE_DIRS:
+            size_kb = sum(
+                get_file_size_kb(p) for p in base_dir.rglob('*') if p.is_file()
+            )
+            total_size += size_kb
+
+            directories.append({
+                "path": str(base_dir),
+                "exists": base_dir.exists(),
+                "is_directory": base_dir.is_dir(),
+                "readable": os.access(base_dir, os.R_OK),
+                "writable": os.access(base_dir, os.W_OK),
+                "size_mb": format_size(size_kb)
+            })
+
         return ToolResponse.success(
             "get_base_dir",
-            path=str(BASE_DIR),
-            exists=BASE_DIR.exists(),
-            is_directory=BASE_DIR.is_dir(),
-            readable=os.access(BASE_DIR, os.R_OK),
-            size_mb=format_size(sum(
-                get_file_size_kb(p) for p in BASE_DIR.rglob('*') if p.is_file()
-            ))
+            base_dir_count=len(BASE_DIRS),
+            directories=directories,
+            total_size_mb=format_size(total_size)
         )
     except Exception as e:
         return ToolResponse.error(str(e), "get_base_dir")
 
+@mcp.tool()
+def get_config() -> Dict[str, Any]:
+    """Get current MCP filesystem agent configuration.
+
+    Returns:
+        All active settings, limits, and security configuration.
+        Useful for understanding constraints and capabilities.
+    """
+    try:
+        return ToolResponse.success(
+            "get_config",
+            version="3.0.0",
+            allowed_base_dirs=[str(bd) for bd in BASE_DIRS],
+            token_limits={
+                "max_file_size_mb": MAX_FILE_SIZE_KB / 1024,
+                "max_results": MAX_RESULTS,
+                "chunk_size_kb": DEFAULT_CHUNK_SIZE_KB,
+                "batch_size_mb": TOTAL_BATCH_SIZE_KB / 1024,
+                "max_lines_to_search": MAX_LINES_TO_SEARCH,
+                "context_width_chars": CONTEXT_WIDTH,
+                "max_preview_lines": MAX_PREVIEW_LINES
+            },
+            ignore_patterns={
+                "directories": sorted(list(IGNORE_DIRS)),
+                "binary_extensions": sorted(list(BINARY_EXTENSIONS))
+            },
+            capabilities={
+                "read_operations": ["read_file", "read_file_chunked", "batch_read_files"],
+                "write_operations": ["write_file", "append_file"],
+                "edit_operations": ["replace_text", "insert_at_line", "delete_lines"],
+                "search_operations": ["search_files", "search_content", "search_files_by_ext"],
+                "code_analysis": ["search_code_structure"],
+                "info_operations": ["file_summary", "list_directory", "get_tree"]
+            }
+        )
+    except Exception as e:
+        return ToolResponse.error(str(e), "get_config")
+
+@mcp.tool()
+def list_allowed_paths() -> Dict[str, Any]:
+    """List all accessible base directories with details.
+
+    Returns:
+        Each directory's path, size, permissions, and status.
+        Use this to verify what you can access.
+    """
+    try:
+        paths = []
+
+        for base_dir in BASE_DIRS:
+            try:
+                stat = base_dir.stat()
+                size_kb = sum(
+                    get_file_size_kb(p) for p in base_dir.rglob('*') if p.is_file()
+                )
+
+                paths.append({
+                    "path": str(base_dir),
+                    "exists": base_dir.exists(),
+                    "is_directory": base_dir.is_dir(),
+                    "readable": os.access(base_dir, os.R_OK),
+                    "writable": os.access(base_dir, os.W_OK),
+                    "executable": os.access(base_dir, os.X_OK),
+                    "size_mb": round(size_kb / 1024, 2),
+                    "file_count": len(list(base_dir.rglob('*')))
+                })
+            except Exception as e:
+                paths.append({
+                    "path": str(base_dir),
+                    "exists": False,
+                    "error": str(e)
+                })
+
+        return ToolResponse.success(
+            "list_allowed_paths",
+            count=len(paths),
+            paths=paths
+        )
+    except Exception as e:
+        logger.error(f"list_allowed_paths error: {e}")
+        return ToolResponse.error(str(e), "list_allowed_paths")
+@mcp.tool()
+def path_info(path: str) -> Dict[str, Any]:
+    """Get detailed information about a specific path.
+
+    Args:
+        path: Path to inspect (relative to any base directory).
+
+    Returns:
+        Full path info, permissions, size, which base dir it belongs to.
+        Use this to verify you can access a file before operations.
+    """
+    try:
+        p = safe_path(path)
+
+        # Find which base directory this path belongs to
+        base_dir_match = None
+        rel_path = None
+        for bd in BASE_DIRS:
+            try:
+                rel_path = p.relative_to(bd)
+                base_dir_match = bd
+                break
+            except:
+                continue
+
+        if not p.exists():
+            return ToolResponse.error(f"Path does not exist: {path}", "path_info")
+
+        stat = p.stat()
+        result = {
+            "absolute_path": str(p),
+            "base_directory": str(base_dir_match) if base_dir_match else "unknown",
+            "relative_path": str(rel_path) if rel_path else path,
+            "exists": True,
+            "readable": os.access(p, os.R_OK),
+            "writable": os.access(p, os.W_OK),
+            "executable": os.access(p, os.X_OK),
+            "modified": datetime.fromtimestamp(stat.st_mtime).isoformat()
+        }
+
+        if p.is_file():
+            size_kb = get_file_size_kb(p)
+            result.update({
+                "type": "file",
+                "size_bytes": stat.st_size,
+                "size_kb": size_kb,
+                "size_formatted": format_size(size_kb),
+                "lines": count_file_lines(p) if is_text_file(p) else None,
+                "is_text": is_text_file(p),
+                "is_binary": not is_text_file(p)
+            })
+        else:
+            items = list(p.iterdir())
+            result.update({
+                "type": "directory",
+                "item_count": len(items),
+                "file_count": sum(1 for i in items if i.is_file()),
+                "dir_count": sum(1 for i in items if i.is_dir())
+            })
+
+        return ToolResponse.success("path_info", **result)
+
+    except ValueError as e:
+        return ToolResponse.error(str(e), "path_info")
+    except Exception as e:
+        logger.error(f"path_info error: {e}")
+        return ToolResponse.error(str(e), "path_info")
+
+@mcp.tool()
+def validate_path(path: str) -> Dict[str, Any]:
+    """Validate if a path is accessible and within allowed directories.
+
+    Args:
+        path: Path to validate.
+
+    Returns:
+        Whether path is valid, which base dir it belongs to, and why (if invalid).
+        Use this before attempting file operations.
+    """
+    try:
+        p = safe_path(path)
+
+        # Find which base directory
+        for bd in BASE_DIRS:
+            try:
+                rel = p.relative_to(bd)
+                return ToolResponse.success(
+                    "validate_path",
+                    is_valid=True,
+                    absolute_path=str(p),
+                    base_directory=str(bd),
+                    relative_path=str(rel),
+                    exists=p.exists(),
+                    is_file=p.is_file(),
+                    is_dir=p.is_dir()
+                )
+            except:
+                continue
+
+        # Shouldn't reach here, but just in case
+        return ToolResponse.error("Path could not be validated", "validate_path")
+
+    except ValueError as e:
+        return ToolResponse.success(
+            "validate_path",
+            is_valid=False,
+            reason=str(e),
+            suggestion="Use one of the paths returned by list_allowed_paths()"
+        )
+    except Exception as e:
+        return ToolResponse.error(str(e), "validate_path")
 
 # ========================
 # DIRECTORY LISTING TOOLS
@@ -1414,7 +1662,10 @@ if __name__ == "__main__":
     logger.info("=" * 70)
     logger.info("🚀 TOKEN-OPTIMIZED MCP FILESYSTEM AGENT v3 (PRODUCTION-READY)")
     logger.info("=" * 70)
-    logger.info(f"📁 BASE_DIR: {BASE_DIR}")
+    logger.info(f"📁 BASE DIRECTORIES ({len(BASE_DIRS)}):")
+    for i, bd in enumerate(BASE_DIRS, 1):
+        logger.info(f"   {i}. {bd}")
+    logger.info(f"   Set MCP_BASE_DIRS=path1,path2,path3 to change")
     logger.info(f"   Set MCP_BASE_DIR environment variable to change this")
     logger.info("")
     logger.info("✨ Features:")

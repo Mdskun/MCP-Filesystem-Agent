@@ -11,18 +11,37 @@ services:
       - MCP_BASE_DIR=/workspace
       - PYTHONUNBUFFERED=1
     volumes:
-      - ${MCP_WORKSPACE_PATH:-./workspace}:/workspace
+      - ${MCP_WORKSPACE_PATH:-./workspace}:/workspace:rw
     stdin_open: true
     tty: true
-    networks:
-      - mcp-network
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=mcp-filesystem-agent"
+    
+    # Health check
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 10s
 
 networks:
-  mcp-network:
+  default:
+    name: mcp-network
     driver: bridge

@@ -26,10 +26,10 @@
       "configuration": {
         "environment_variables": [
           {
-            "name": "MCP_BASE_DIR",
+            "name": "MCP_BASE_DIRS",
             "description": "Base directory for file operations (default: ~/Data/Repos)",
             "required": false,
-            "example": "/home/user/projects"
+            "example": "/home/user/projects,/home/user/documents,/data/external"
           }
         ]
       }
