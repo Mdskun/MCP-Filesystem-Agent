@@ -14,11 +14,8 @@ cd mcp-fs-agent
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Set base directory (optional)
-export MCP_BASE_DIR="/path/to/your/projects"
-
-# 4. Run server
-python server3.py
+# 3. Run server (pass an allowed directory as an argument)
+python server3.py /path/to/your/projects
 ```
 
 ---
@@ -228,13 +225,7 @@ docker-compose up -d
 4. Fill in:
    - **Name:** `filesystem-agent`
    - **Command:** `python`
-   - **Arguments:** `["/Users/yourname/mcp-fs-agent/server3.py"]`
-   - **Environment:**
-     ```json
-     {
-       "MCP_BASE_DIR": "/Users/yourname/projects"
-     }
-     ```
+   - **Arguments:** `["/Users/yourname/mcp-fs-agent/server3.py", "/Users/yourname/projects"]`
 5. Click **Save**
 6. Restart Claude Desktop
 
@@ -246,13 +237,7 @@ docker-compose up -d
 4. Fill in:
    - **Name:** `filesystem-agent`
    - **Command:** `python`
-   - **Arguments:** `["C:\\Users\\YourName\\mcp-fs-agent\\server3.py"]`
-   - **Environment:**
-     ```json
-     {
-       "MCP_BASE_DIR": "C:\\Users\\YourName\\projects"
-     }
-     ```
+   - **Arguments:** `["C:\\Users\\YourName\\mcp-fs-agent\\server3.py", "C:\\Users\\YourName\\projects"]`
 5. Click **Save**
 6. Restart Claude Desktop
 
@@ -264,13 +249,7 @@ docker-compose up -d
 4. Fill in:
    - **Name:** `filesystem-agent`
    - **Command:** `python`
-   - **Arguments:** `["/home/username/mcp-fs-agent/server3.py"]`
-   - **Environment:**
-     ```json
-     {
-       "MCP_BASE_DIR": "/home/username/projects"
-     }
-     ```
+   - **Arguments:** `["/home/username/mcp-fs-agent/server3.py", "/home/username/projects"]`
 5. Click **Save**
 6. Restart Claude Desktop
 
@@ -408,13 +387,19 @@ DEFAULT_CHUNK_SIZE_KB = 25  # Smaller chunks
 
 ## Multi-Path Configuration
 
-### Single Path (Default)
+### Simplest: Command-Line Arguments
+
+```bash
+python server3.py /home/user/projects /home/user/research /data/shared
+```
+
+### Single Path (env var)
 
 ```bash
 export MCP_BASE_DIR="/home/user/projects"
 ```
 
-### Multiple Paths
+### Multiple Paths (env var)
 
 ```bash
 export MCP_BASE_DIRS="/home/user/projects,/home/user/research,/data/shared"
@@ -429,10 +414,12 @@ Then in Claude: Use any path within those directories.
   "mcpServers": {
     "filesystem-agent": {
       "command": "python",
-      "args": ["/path/to/server3.py"],
-      "env": {
-        "MCP_BASE_DIRS": "/path/to/projects,/path/to/docs,/data/external"
-      }
+      "args": [
+        "/path/to/server3.py",
+        "/path/to/projects",
+        "/path/to/docs",
+        "/data/external"
+      ]
     }
   }
 }

@@ -1,0 +1,66 @@
+{
+  "manifest_version": "0.3",
+  "name": "filesystem-agent",
+  "display_name": "Filesystem",
+  "icon": "FileAgent.png",
+  "version": "3.1.0",
+  "description": "Token-optimized filesystem agent for reading, writing, searching, and analyzing files with minimal token usage.",
+  "long_description": "Gives Claude 22 file operations (read, write, search, edit, and code-structure analysis) scoped to directories you explicitly allow. Built for token efficiency: previews, chunked reads, and dry-run edits avoid dumping whole files into context. Runs entirely on your machine — no network calls, no telemetry.",
+  "author": { "name": "Manthan" },
+  "repository": { "type": "git", "url": "https://github.com/Mdskun/mcp-fs-agent.git" },
+  "homepage": "https://github.com/Mdskun/mcp-fs-agent",
+  "documentation": "https://github.com/Mdskun/mcp-fs-agent/blob/main/INSTALLATION.md",
+  "support": "https://github.com/Mdskun/mcp-fs-agent/issues",
+  "license": "MIT",
+  "keywords": ["filesystem", "mcp", "files", "search", "code-analysis", "token-efficient"],
+  "server": {
+    "type": "python",
+    "entry_point": "server3.py",
+    "mcp_config": {
+      "command": "python",
+      "env": { "PYTHONPATH": "${__dirname}/server/lib" },
+      "args": ["${__dirname}/server3.py", "${user_config.allowed_directories}"]
+    }
+  },
+  "user_config": {
+    "allowed_directories": {
+      "type": "directory",
+      "title": "Allowed Directories",
+      "description": "Select directories the filesystem agent can access",
+      "multiple": true,
+      "required": true
+    }
+  },
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": { "python": ">=3.8.0 <4.0.0" }
+  },
+  "tools": [
+    { "name": "ping", "description": "Health check - verify server is running" },
+    { "name": "get_base_dir", "description": "Get base directory configuration and status" },
+    { "name": "get_config", "description": "Get current server configuration and limits" },
+    { "name": "list_allowed_paths", "description": "List all accessible base directories" },
+    { "name": "path_info", "description": "Get detailed information about a specific path" },
+    { "name": "validate_path", "description": "Validate if a path is accessible and allowed" },
+    { "name": "list_directory", "description": "List directory contents with file metadata" },
+    { "name": "get_tree", "description": "Get a compact directory tree structure" },
+    { "name": "file_summary", "description": "Get file metadata without reading content" },
+    { "name": "read_file", "description": "Read a file, optionally as a preview of the first N lines" },
+    { "name": "read_file_chunked", "description": "Read a large file in paginated chunks" },
+    { "name": "batch_read_files", "description": "Read multiple files in a single call" },
+    { "name": "write_file", "description": "Create or overwrite a file" },
+    { "name": "append_file", "description": "Append content to an existing file" },
+    { "name": "create_directory", "description": "Create a directory, including parents" },
+    { "name": "replace_text", "description": "Find and replace text in a file, with dry-run support" },
+    { "name": "insert_at_line", "description": "Insert text at a specific line number" },
+    { "name": "delete_lines", "description": "Delete a range of lines from a file" },
+    { "name": "search_files", "description": "Search for files by filename" },
+    { "name": "search_content", "description": "Search file contents, with optional regex" },
+    { "name": "search_files_by_ext", "description": "Find files by extension" },
+    { "name": "search_code_structure", "description": "Find functions, classes, and imports across Python, JavaScript, Go, and Rust" }
+  ],
+  "privacy_policies": [
+    "https://github.com/Mdskun/mcp-fs-agent/blob/main/PRIVACY.md"
+  ]
+}

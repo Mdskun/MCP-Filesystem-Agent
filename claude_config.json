@@ -3,36 +3,35 @@
     {
       "name": "filesystem-agent",
       "description": "Token-optimized filesystem agent for reading, writing, searching, and analyzing files with minimal token usage",
-      "version": "3.0.0",
+      "version": "3.1.0",
       "author": "Manthan",
       "homepage": "https://github.com/Mdskun/mcp-fs-agent",
-      "repository": {
-        "type": "git",
-        "url": "https://github.com/Mdskun/mcp-fs-agent.git"
-      },
+      "repository": { "type": "git", "url": "https://github.com/Mdskun/mcp-fs-agent.git" },
       "license": "MIT",
       "keywords": ["filesystem", "mcp", "files", "search", "code-analysis", "token-efficient"],
-      "capabilities": [
-        "file_reading",
-        "file_writing",
-        "file_searching",
-        "code_analysis",
-        "directory_navigation"
-      ],
-      "requirements": {
-        "python": ">=3.8",
-        "mcp": ">=0.4.0"
-      },
+      "capabilities": ["file_reading", "file_writing", "file_searching", "code_analysis", "directory_navigation"],
+      "requirements": { "python": ">=3.8", "mcp": ">=1.9,<2" },
       "configuration": {
+        "cli_arguments": {
+          "description": "Preferred: pass one or more allowed directories directly as command-line arguments",
+          "example": "python server3.py /home/user/projects /home/user/documents"
+        },
         "environment_variables": [
           {
             "name": "MCP_BASE_DIRS",
-            "description": "Base directory for file operations (default: ~/Data/Repos)",
+            "description": "Fallback if not using CLI args: comma-separated list of allowed directories",
             "required": false,
             "example": "/home/user/projects,/home/user/documents,/data/external"
+          },
+          {
+            "name": "MCP_BASE_DIR",
+            "description": "Fallback: single allowed directory (default: ~/Data/Repos)",
+            "required": false,
+            "example": "/home/user/projects"
           }
         ]
       }
     }
-  ]
+  ],
+  "_note": "This file is a legacy config descriptor kept for backward compatibility. manifest.json (MCPB spec 0.3) is now the authoritative source of truth for packaging and connector config."
 }

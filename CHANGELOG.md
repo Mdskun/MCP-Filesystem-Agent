@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.0] - 2026-07-11
+
+### Fixed
+- **Security:** `safe_path()` used a raw string-prefix check, which incorrectly
+  allowed access to sibling directories sharing a name prefix with an allowed
+  directory (e.g. `Data` would wrongly admit `Data-leak`). Replaced with
+  `Path.relative_to()`, which is segment-aware. Covered by regression tests
+  in `tests/test_safe_path.py`.
+- Docker `HEALTHCHECK` previously always passed (`sys.exit(0)` unconditionally);
+  now checks the actual server process via `pgrep`.
+- Removed unused `fastapi`/`uvicorn` dependencies from `requirements.txt` —
+  neither was ever imported by `server3.py`.
+
+### Added
+- **CLI-argument configuration:** directories can now be passed directly as
+  command-line arguments (`python server3.py /path/one /path/two`), matching
+  the connector config pattern used by the official filesystem MCP server.
+  Priority order: CLI args → `MCP_BASE_DIRS` → `MCP_BASE_DIR` → default.
+  Covered by `tests/test_cli_args.py`.
+- **Tool annotations:** all 22 tools now declare `title`, `readOnlyHint`,
+  `destructiveHint`, `idempotentHint`, and `openWorldHint`, so hosts (e.g.
+  Claude Desktop) can group and gate tools by risk level.
+- `manifest.json` (MCPB spec 0.3) for packaging as a Desktop Extension,
+  including a `directory`-type, multi-select `allowed_directories` config.
+- `PRIVACY.md` and a "Privacy Policy" section in `README.md`.
+- `PACKAGING.md` documenting the steps to actually build a `.mcpb` bundle.
+- `.mcpbignore` to exclude dev-only files from the packaged bundle.
+
+### Changed
+- `mcp` dependency pin updated from the stale `==0.4.0` to `>=1.9,<2`
+  (consistent across `requirements.txt`, `manifest.json`, `claude_config.json`).
+- README's self-graded "Quality Metrics" (e.g. "9.2/10", "Enterprise Grade")
+  replaced with an honest "Quality Notes" section.
+
+---
+
 ## [3.0.0] - 2024-01-19
 
 ### Added
@@ -104,11 +140,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Roadmap
 
-### v3.1.0 (Planned)
+### v3.2.0 (Planned)
+- [ ] Test coverage for write/edit tools (write_file, replace_text, delete_lines, etc.)
 - [ ] Additional language support (C#, Java, C++)
 - [ ] Git integration (history, blame)
 - [ ] Performance optimizations
-- [ ] Better error recovery
 - [ ] Enhanced logging
 
 ### v4.0.0 (Future)
@@ -135,7 +171,8 @@ When updating this file:
 
 | Version | Date | Status |
 |---------|------|--------|
-| 3.0.0 | 2024-01-19 | ✅ Current (Production) |
+| 3.1.0 | 2026-07-11 | ✅ Current |
+| 3.0.0 | 2024-01-19 | ⚠️ Deprecated |
 | 2.0.0 | 2024-01-10 | ⚠️ Deprecated |
 | 1.0.0 | 2024-01-01 | ⚠️ Deprecated |
 
@@ -177,4 +214,4 @@ Claude: show me my configuration
 
 ---
 
-**Last Updated:** January 19, 2024
+**Last Updated:** July 11, 2026

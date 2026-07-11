@@ -1,14 +1,10 @@
 # MCP Filesystem Agent - Production Dependencies
 
 # Core MCP Framework
-mcp==0.4.0
-
-# Web Framework & Server
-fastapi==0.104.1
-uvicorn==0.24.0
-
-# Optional but recommended
-urllib3==2.1.0
+# Pinned below v2 — a breaking v2.0.0 release is expected around 2026-07-28
+# (see https://github.com/modelcontextprotocol/python-sdk/releases). Re-pin
+# deliberately once this project has been tested against v2.
+mcp>=1.9,<2
 
 # Development & Testing (optional)
 # Uncomment below for development environment

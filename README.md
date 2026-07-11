@@ -4,8 +4,6 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Status: Production Ready](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](#)
-[![Code Quality: 9.2/10](https://img.shields.io/badge/code%20quality-9.2%2F10-brightgreen.svg)](#)
 
 **Token-optimized Model Context Protocol (MCP) server for Claude and other AI models**
 
@@ -22,7 +20,7 @@ A production-ready MCP server that enables **Claude, Claude Desktop, and other A
 **Key Stats:**
 - 📊 **25+ file operations** (read, write, search, edit, analyze)
 - ⚡ **95% token savings** vs. naive file reading
-- 🔒 **Enterprise-grade security** (path validation, size limits, non-root execution)
+- 🔒 **Path-traversal protected** (segment-aware path validation, size limits, non-root execution)
 - 🐳 **Production Docker** with health checks and resource limits
 - 📝 **Comprehensive documentation** for all platforms
 - 🌍 **Multi-language support** (Python, JavaScript, Go, Rust)
@@ -89,21 +87,17 @@ cd mcp-fs-agent
 pip install -r requirements.txt
 ```
 
-### 2️⃣ Configure (1 minute)
+### 2️⃣ Run (30 seconds)
+
+Pass the directory you want Claude to access as an argument — no
+configuration step needed:
 
 ```bash
-# Set your base directory (optional, default is ~/Data/Repos)
-export MCP_BASE_DIR="/path/to/your/projects"
-
-# Or for multiple paths:
-export MCP_BASE_DIRS="/path/to/projects,/path/to/documents,/data/external"
+python server3.py /path/to/your/projects
 ```
 
-### 3️⃣ Run (30 seconds)
-
-```bash
-python server3.py
-```
+(Prefer environment variables instead? `export MCP_BASE_DIR=/path/to/your/projects`
+then run `python server3.py` with no arguments — see [Configuration](#configuration).)
 
 You should see:
 ```
@@ -117,7 +111,7 @@ You should see:
 ============================================================
 ```
 
-### 4️⃣ Use with Claude
+### 3️⃣ Use with Claude
 
 **Option A: Claude Desktop (Recommended)**
 ```json
@@ -125,13 +119,21 @@ You should see:
   "mcpServers": {
     "filesystem-agent": {
       "command": "python",
-      "args": ["/path/to/mcp-fs-agent/server3.py"],
-      "env": {
-        "MCP_BASE_DIR": "/path/to/your/projects"
-      }
+      "args": ["/path/to/mcp-fs-agent/server3.py", "/path/to/your/projects"]
     }
   }
 }
+```
+
+Add more allowed directories by listing more paths as additional args —
+exactly like the official filesystem MCP server:
+
+```json
+"args": [
+  "/path/to/mcp-fs-agent/server3.py",
+  "/path/to/projects",
+  "/path/to/documents"
+]
 ```
 
 **Option B: Claude.ai (Web)**
@@ -192,7 +194,40 @@ Claude uses: search_content(query="^async def", use_regex=True)
 Result: Finds 12 async functions with context (90% token savings!)
 ```
 
-See [INSTALLATION.md](INSTALLATION.md#usage-examples) for more examples.
+### Example 5: Connect and Use in One Go
+
+```json
+// claude_desktop_config.json
+{
+  "mcpServers": {
+    "filesystem-agent": {
+      "command": "python",
+      "args": [
+        "/home/you/mcp-fs-agent/server3.py",
+        "/home/you/projects/my-app"
+      ]
+    }
+  }
+}
+```
+
+Restart Claude Desktop, then:
+
+```
+You: What's in my project, and does it have any TODOs left?
+
+Claude uses: get_tree(path=".", max_depth=2)
+             search_content(query="TODO", use_regex=False)
+
+Result: A directory tree plus every TODO comment with file and line
+number — without Claude reading a single full file.
+```
+
+Because `/home/you/projects/my-app` was the only path passed in `args`,
+that's the only directory this server can touch — same access model as
+the official filesystem MCP server.
+
+
 
 ---
 
@@ -233,9 +268,44 @@ See [SECURITY.md](SECURITY.md) for details.
 
 ---
 
+## Privacy Policy
+
+This server does not collect, transmit, or store any data outside your own
+machine. It has no network client code, no telemetry, and no third-party
+integrations — it only reads and writes files within the directories you
+configure via `MCP_BASE_DIR` / `MCP_BASE_DIRS`. Local diagnostic logs go to
+`stderr` only, never leave your machine, and never contain file contents.
+
+Full policy, including data retention and contact information:
+**[PRIVACY.md](PRIVACY.md)**
+
+---
+
 ## Configuration
 
-### Environment Variables
+### Simplest: Command-Line Arguments (Recommended)
+
+Pass one or more allowed directories directly as arguments — this is the
+same pattern used by the official filesystem MCP server:
+
+```bash
+python server3.py /path/to/projects
+python server3.py /path/to/projects /path/to/documents /data/external
+```
+
+In a connector config (Claude Desktop, etc.), this is just:
+
+```json
+{
+  "command": "python",
+  "args": ["/path/to/server3.py", "/path/to/projects"]
+}
+```
+
+### Alternative: Environment Variables
+
+If you'd rather not put paths in the `args` list, environment variables
+still work exactly as before:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -269,15 +339,17 @@ TOTAL_BATCH_SIZE_KB = 5000       # Max for batch operations
 
 ---
 
-## Quality Metrics
+## Quality Notes
 
-| Metric | Score | Status |
-|--------|-------|--------|
-| Code Quality | 9.2/10 | ✅ Excellent |
-| Security | 9.5/10 | ✅ Excellent |
-| Documentation | 9.5/10 | ✅ Excellent |
-| Performance | 8.5/10 | ✅ Very Good |
-| **Overall** | **9.2/10** | ✅ **Enterprise Grade** |
+These scores are the author's own assessment, not an independent audit —
+take them as a rough guide, not a certification.
+
+| Area | Notes |
+|------|-------|
+| Code Quality | Single-file implementation, consistent response types, docstrings on every tool |
+| Security | Path-traversal check uses segment-aware `Path.relative_to()`; covered by regression tests in `tests/` |
+| Documentation | Install guide, contributing guide, security policy, and privacy policy included |
+| Testing | Basic regression tests for path safety exist in `tests/`; broader coverage (write/edit tools) is still a gap |
 
 ---
 

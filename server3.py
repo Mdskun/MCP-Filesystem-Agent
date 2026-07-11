@@ -24,6 +24,7 @@ import sys
 import itertools
 
 from mcp.server import FastMCP
+from mcp.types import ToolAnnotations
 
 # ========================
 # LOGGING SETUP (STDERR ONLY)
@@ -41,25 +42,35 @@ logger = logging.getLogger(__name__)
 
 mcp = FastMCP("filesystem-agent")
 
-# Base directory - configurable via MCP_BASE_DIR environment variable
-# Base directories - supports multiple paths
-# Priority: MCP_BASE_DIRS (comma-sep) > MCP_BASE_DIR (single) > default
+# Base directory - configurable via CLI arguments (like the official
+# @modelcontextprotocol/server-filesystem: `python server3.py /path/one /path/two`)
+# or via MCP_BASE_DIR / MCP_BASE_DIRS environment variables.
+# Priority: CLI args > MCP_BASE_DIRS (comma-sep) > MCP_BASE_DIR (single) > default
 def _load_base_dirs():
     """Load allowed base directories with fallback chain."""
-    # Priority 1: Multi-path env var (comma-separated)
+    # Priority 1: Command-line arguments — one or more directory paths.
+    # This matches the connector config pattern used by the official
+    # filesystem MCP server, where each arg is a directory to allow.
+    cli_paths = sys.argv[1:]
+    if cli_paths:
+        paths = [Path(p).expanduser().resolve() for p in cli_paths]
+        logger.info(f"Loaded {len(paths)} base directories from command-line arguments")
+        return paths
+
+    # Priority 2: Multi-path env var (comma-separated)
     multi_paths = os.getenv("MCP_BASE_DIRS")
     if multi_paths:
-        paths = [Path(p.strip()).resolve() for p in multi_paths.split(",")]
+        paths = [Path(p.strip()).expanduser().resolve() for p in multi_paths.split(",")]
         logger.info(f"Loaded {len(paths)} base directories from MCP_BASE_DIRS")
         return paths
 
-    # Priority 2: Single path env var (backward compatible)
+    # Priority 3: Single path env var (backward compatible)
     single_path = os.getenv("MCP_BASE_DIR")
     if single_path:
         logger.info(f"Loaded single base directory from MCP_BASE_DIR")
-        return [Path(single_path).resolve()]
+        return [Path(single_path).expanduser().resolve()]
 
-    # Priority 3: Default
+    # Priority 4: Default
     default = Path.home() / "Data/Repos"
     logger.info(f"Using default base directory")
     return [default.resolve()]
@@ -95,6 +106,15 @@ BINARY_EXTENSIONS = {
 
 def safe_path(path: str) -> Path:
     """Ensure path is within ANY BASE_DIR and symlink-safe."""
+    def _is_within(candidate: Path, base: Path) -> bool:
+        """True only if candidate == base or base is a real ancestor directory
+        (segment-aware, unlike a raw string prefix check)."""
+        try:
+            candidate.relative_to(base)
+            return True
+        except ValueError:
+            return False
+
     try:
         # Try to resolve from each base directory
         for base_dir in BASE_DIRS:
@@ -102,7 +122,7 @@ def safe_path(path: str) -> Path:
                 p = (base_dir / path).resolve()
                 base_resolved = base_dir.resolve()
 
-                if str(p).startswith(str(base_resolved)):
+                if _is_within(p, base_resolved):
                     return p
             except:
                 continue
@@ -110,7 +130,7 @@ def safe_path(path: str) -> Path:
         # If no base directory matched, try as absolute path
         p = Path(path).resolve()
         for base_dir in BASE_DIRS:
-            if str(p).startswith(str(base_dir)):
+            if _is_within(p, base_dir.resolve()):
                 return p
 
         # Path not in any allowed directory
@@ -233,7 +253,13 @@ class ToolResponse:
 # BASIC TOOLS
 # ========================
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Ping",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def ping() -> Dict[str, str]:
     """Health check - verify server is running.
 
@@ -243,13 +269,20 @@ def ping() -> Dict[str, str]:
     return ToolResponse.success("ping", server="filesystem-agent", version="v3")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Get Base Directory",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def get_base_dir() -> Dict[str, Any]:
     """Get base directory configuration and status.
 
     Returns:
         List of allowed base directories with status.
-        Set MCP_BASE_DIRS (comma-sep) or MCP_BASE_DIR environment variables.
+        Set via command-line arguments, or MCP_BASE_DIRS / MCP_BASE_DIR
+        environment variables.
     """
     try:
         directories = []
@@ -279,7 +312,13 @@ def get_base_dir() -> Dict[str, Any]:
     except Exception as e:
         return ToolResponse.error(str(e), "get_base_dir")
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Get Configuration",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def get_config() -> Dict[str, Any]:
     """Get current MCP filesystem agent configuration.
 
@@ -317,7 +356,13 @@ def get_config() -> Dict[str, Any]:
     except Exception as e:
         return ToolResponse.error(str(e), "get_config")
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="List Allowed Paths",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def list_allowed_paths() -> Dict[str, Any]:
     """List all accessible base directories with details.
 
@@ -360,7 +405,13 @@ def list_allowed_paths() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"list_allowed_paths error: {e}")
         return ToolResponse.error(str(e), "list_allowed_paths")
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Get Path Info",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def path_info(path: str) -> Dict[str, Any]:
     """Get detailed information about a specific path.
 
@@ -428,7 +479,13 @@ def path_info(path: str) -> Dict[str, Any]:
         logger.error(f"path_info error: {e}")
         return ToolResponse.error(str(e), "path_info")
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Validate Path",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def validate_path(path: str) -> Dict[str, Any]:
     """Validate if a path is accessible and within allowed directories.
 
@@ -476,7 +533,13 @@ def validate_path(path: str) -> Dict[str, Any]:
 # DIRECTORY LISTING TOOLS
 # ========================
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="List Directory",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def list_directory(path: str = ".") -> Dict[str, Any]:
     """List directory contents with file metadata.
 
@@ -533,7 +596,13 @@ def list_directory(path: str = ".") -> Dict[str, Any]:
         return ToolResponse.error(str(e), "list_directory")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Get Directory Tree",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def get_tree(path: str = ".", max_depth: int = 2) -> Dict[str, Any]:
     """Get directory tree structure (compact format).
 
@@ -585,7 +654,13 @@ def get_tree(path: str = ".", max_depth: int = 2) -> Dict[str, Any]:
 # FILE INFO TOOLS
 # ========================
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="File Summary",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def file_summary(path: str) -> Dict[str, Any]:
     """Get file metadata without reading content (token-efficient).
 
@@ -627,7 +702,13 @@ def file_summary(path: str) -> Dict[str, Any]:
 # FILE READING TOOLS
 # ========================
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Read File",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def read_file(path: str, preview_lines: int = 0) -> Dict[str, Any]:
     """Read file with optional preview mode (token-efficient).
 
@@ -684,7 +765,13 @@ def read_file(path: str, preview_lines: int = 0) -> Dict[str, Any]:
         return ToolResponse.error(str(e), "read_file")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Read File (Chunked)",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def read_file_chunked(
     path: str,
     chunk_index: int = 0,
@@ -750,7 +837,13 @@ def read_file_chunked(
         return ToolResponse.error(str(e), "read_file_chunked")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Batch Read Files",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def batch_read_files(paths: List[str]) -> Dict[str, Any]:
     """Read multiple files at once (efficient for related files).
 
@@ -809,7 +902,13 @@ def batch_read_files(paths: List[str]) -> Dict[str, Any]:
 # FILE WRITING TOOLS
 # ========================
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Write File",
+    readOnlyHint=False,
+    destructiveHint=True,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def write_file(path: str, content: str) -> Dict[str, Any]:
     """Create or overwrite a file.
 
@@ -839,7 +938,13 @@ def write_file(path: str, content: str) -> Dict[str, Any]:
         return ToolResponse.error(str(e), "write_file")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Append to File",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=False
+))
 def append_file(path: str, content: str) -> Dict[str, Any]:
     """Append content to existing file.
 
@@ -868,7 +973,13 @@ def append_file(path: str, content: str) -> Dict[str, Any]:
         return ToolResponse.error(str(e), "append_file")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Create Directory",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def create_directory(path: str) -> Dict[str, Any]:
     """Create a directory (with parent directories if needed).
 
@@ -895,7 +1006,13 @@ def create_directory(path: str) -> Dict[str, Any]:
 # FILE EDITING TOOLS
 # ========================
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Find and Replace Text",
+    readOnlyHint=False,
+    destructiveHint=True,
+    idempotentHint=False,
+    openWorldHint=False
+))
 def replace_text(
     path: str,
     old_text: str,
@@ -962,7 +1079,13 @@ def replace_text(
         return ToolResponse.error(str(e), "replace_text")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Insert Text at Line",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=False
+))
 def insert_at_line(path: str, line_number: int, text: str) -> Dict[str, Any]:
     """Insert text at a specific line number.
 
@@ -1008,7 +1131,13 @@ def insert_at_line(path: str, line_number: int, text: str) -> Dict[str, Any]:
         return ToolResponse.error(str(e), "insert_at_line")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Delete Lines",
+    readOnlyHint=False,
+    destructiveHint=True,
+    idempotentHint=False,
+    openWorldHint=False
+))
 def delete_lines(path: str, start_line: int, end_line: int) -> Dict[str, Any]:
     """Delete a range of lines.
 
@@ -1060,7 +1189,13 @@ def delete_lines(path: str, start_line: int, end_line: int) -> Dict[str, Any]:
 # SEARCH TOOLS (MINIMAL TOKENS)
 # ========================
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Search Files by Name",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def search_files(
     query: str,
     path: str = ".",
@@ -1111,7 +1246,13 @@ def search_files(
         return ToolResponse.error(str(e), "search_files")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Search File Contents",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def search_content(
     query: str,
     path: str = ".",
@@ -1179,17 +1320,21 @@ def search_content(
                                 )
 
                             # Check for match
-                            match = None
+                            match_found = False
+                            match_pos = 0
+
                             if use_regex and regex_pattern:
-                                match = regex_pattern.search(line)
+                                m = regex_pattern.search(line)
+                                if m:
+                                    match_found = True
+                                    match_pos = m.start()
                             else:
                                 if query_lower in line.lower():
+                                    match_found = True
                                     match_pos = line.lower().find(query_lower)
-                                    match = type('Match', (), {'start': lambda: match_pos, 'end': lambda: match_pos + len(query)})()
 
-                            if match:
+                            if match_found:
                                 rel_path = str(file_path.relative_to(base))
-                                match_pos = match.start() if hasattr(match, 'start') else 0
 
                                 start = max(0, match_pos - CONTEXT_WIDTH)
                                 end = min(len(line), match_pos + len(query) + CONTEXT_WIDTH)
@@ -1228,7 +1373,13 @@ def search_content(
         return ToolResponse.error(str(e), "search_content")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Search Files by Extension",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def search_files_by_ext(
     extension: str,
     path: str = ".",
@@ -1562,7 +1713,13 @@ def extract_rust_structures(file_path: Path, base_path: Path, search_type: str) 
     return results
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Search Code Structure",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False
+))
 def search_code_structure(
     path: str = ".",
     search_type: str = "functions",
@@ -1665,8 +1822,10 @@ if __name__ == "__main__":
     logger.info(f"📁 BASE DIRECTORIES ({len(BASE_DIRS)}):")
     for i, bd in enumerate(BASE_DIRS, 1):
         logger.info(f"   {i}. {bd}")
-    logger.info(f"   Set MCP_BASE_DIRS=path1,path2,path3 to change")
-    logger.info(f"   Set MCP_BASE_DIR environment variable to change this")
+    logger.info(f"   Pass one or more directory paths as CLI args to change,")
+    logger.info(f"   e.g. python server3.py /path/one /path/two")
+    logger.info(f"   Or set MCP_BASE_DIRS=path1,path2,path3")
+    logger.info(f"   Or set MCP_BASE_DIR to a single path")
     logger.info("")
     logger.info("✨ Features:")
     logger.info("  ✅ 25+ file operations (read, write, search, edit)")
