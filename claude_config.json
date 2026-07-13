@@ -3,7 +3,7 @@
     {
       "name": "filesystem-agent",
       "description": "Token-optimized filesystem agent for reading, writing, searching, and analyzing files with minimal token usage",
-      "version": "3.1.0",
+      "version": "3.1.1",
       "author": "Manthan",
       "homepage": "https://github.com/Mdskun/mcp-fs-agent",
       "repository": { "type": "git", "url": "https://github.com/Mdskun/mcp-fs-agent.git" },

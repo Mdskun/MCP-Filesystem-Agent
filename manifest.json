@@ -3,7 +3,7 @@
   "name": "filesystem-agent",
   "display_name": "Filesystem",
   "icon": "FileAgent.png",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "Token-optimized filesystem agent for reading, writing, searching, and analyzing files with minimal token usage.",
   "long_description": "Gives Claude 22 file operations (read, write, search, edit, and code-structure analysis) scoped to directories you explicitly allow. Built for token efficiency: previews, chunked reads, and dry-run edits avoid dumping whole files into context. Runs entirely on your machine — no network calls, no telemetry.",
   "author": { "name": "Manthan" },

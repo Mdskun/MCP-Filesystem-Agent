@@ -180,7 +180,13 @@ p = Path(user_input)
 ### Tool Structure
 
 ```python
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="My New Tool",
+    readOnlyHint=True,       # False if it writes/modifies anything
+    destructiveHint=False,   # True if it can overwrite or delete data
+    idempotentHint=True,     # True if calling it twice has the same effect as once
+    openWorldHint=False      # False for local-only tools (no external services)
+))
 def my_new_tool(param: str) -> Dict[str, Any]:
     """Short description visible to LLMs.
     
@@ -206,6 +212,10 @@ def my_new_tool(param: str) -> Dict[str, Any]:
         return ToolResponse.error(str(e), "my_new_tool")
 ```
 
+**Every tool needs annotations** — this isn't optional. The Claude Desktop
+connector UI groups tools into "Read-only" vs. write/destructive sections
+based on these hints, and marketplace submission requires them.
+
 ### Response Format
 
 All tools must return standardized format:
@@ -229,11 +239,11 @@ All tools must return standardized format:
 
 ### Update Tool Count
 
-Update mentions of "25 tools" if you add new tools:
+Update mentions of "22 tools" if you add or remove tools:
 - README.md
-- INSTALLATION.md
 - server3.py startup message
 - claude_config.json
+- manifest.json (the `tools` array, plus `compatibility` if relevant)
 
 ---
 
@@ -255,13 +265,17 @@ python
 # Create a chat and test the tool
 ```
 
-### Automated Testing (Future)
+### Automated Testing
 
 ```bash
-# When pytest is added
-pytest tests/
-pytest --cov  # Coverage report
+pytest tests/ -v
+pytest tests/ --cov=server3  # Coverage report
 ```
+
+Existing tests cover path-safety (`test_safe_path.py`), CLI argument
+handling (`test_cli_args.py`), and content search (`test_search_content.py`).
+Write/edit tools (`write_file`, `replace_text`, `delete_lines`, etc.) don't
+have coverage yet — contributions there are especially welcome.
 
 ---
 
@@ -270,10 +284,9 @@ pytest --cov  # Coverage report
 When contributing code:
 
 1. **Update docstrings** - Keep descriptions current
-2. **Update README.md** - If new features or breaking changes
-3. **Update INSTALLATION.md** - If setup changes
-4. **Update CHANGELOG.md** - Describe your changes
-5. **Update comments** - Explain non-obvious logic
+2. **Update README.md** - If new features, breaking changes, or setup steps change
+3. **Update CHANGELOG.md** - Describe your changes
+4. **Update comments** - Explain non-obvious logic
 
 ---
 
@@ -354,7 +367,7 @@ Fixes #123
 - [ ] Additional language support (C#, Java, etc.)
 - [ ] Performance optimizations
 - [ ] Error handling improvements
-- [ ] Test suite (pytest)
+- [ ] Test coverage for write/edit tools (write_file, replace_text, delete_lines, insert_at_line, append_file, create_directory)
 - [ ] Async support
 
 ### Documentation
@@ -407,7 +420,6 @@ Contributors will be recognized in:
 ## Questions?
 
 - 📖 Check [README.md](README.md)
-- 📝 Check [INSTALLATION.md](INSTALLATION.md)
 - 🐛 Open an issue
 - 💬 Check existing discussions
 

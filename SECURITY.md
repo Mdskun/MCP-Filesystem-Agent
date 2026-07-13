@@ -188,17 +188,17 @@ pip install -r requirements.txt
 
 **Benefit:** Isolates dependencies from system Python.
 
-### 2. Limit BASE_DIR Scope
+### 2. Limit Allowed Directories
 
 ```bash
 # ✅ Good
-export MCP_BASE_DIR="/home/user/projects"
+python server3.py /home/user/projects
 
 # ❌ Avoid
-export MCP_BASE_DIR="/"
+python server3.py /
 ```
 
-**Benefit:** Restricts access to only necessary files.
+**Benefit:** Restricts access to only necessary files. (Env vars `MCP_BASE_DIR`/`MCP_BASE_DIRS` work the same way if you prefer those instead.)
 
 ### 3. Use Read-Only Volumes (Docker)
 
@@ -338,6 +338,7 @@ Versions with security fixes:
 
 | Version | Issue | Fix Date |
 |---------|-------|----------|
+| 3.1.0 | `safe_path()` used a string-prefix check instead of segment-aware matching, allowing access to sibling directories sharing a name prefix with an allowed directory (CWE-22) | 2026-07-11 |
 | 3.0.0 | Initial release | - |
 
 ---
@@ -354,14 +355,13 @@ Versions with security fixes:
 ## Support
 
 - 📖 Read [README.md](README.md)
-- 📝 Check [INSTALLATION.md](INSTALLATION.md)
 - 🐛 Report issues [responsibly](#reporting-security-issues)
 - 🤝 Contribute via [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 
-**Last Updated:** January 19, 2024
+**Last Updated:** July 11, 2026
 
-**Policy Version:** 1.0
+**Policy Version:** 1.1
 
 For questions about security, email: manthandsoni@gmail.com

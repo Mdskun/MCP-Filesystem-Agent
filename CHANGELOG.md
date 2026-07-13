@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.1] - 2026-07-11
+
+### Fixed
+- **`search_content` returned 0 results even for text that was definitely
+  present.** A dynamically-created "Match" object used a zero-argument
+  lambda for `.start()`, which raised `TypeError` when called as a bound
+  method (Python auto-passes `self`). That exception was silently swallowed
+  by a broad `except Exception: continue`, discarding every plain-text match
+  found and abandoning the file mid-scan. Regex-mode searches were
+  unaffected. Fixed by removing the dynamic Match object entirely in favor
+  of direct position tracking. Covered by `tests/test_search_content.py`.
+
+---
+
 ## [3.1.0] - 2026-07-11
 
 ### Fixed
@@ -171,7 +185,8 @@ When updating this file:
 
 | Version | Date | Status |
 |---------|------|--------|
-| 3.1.0 | 2026-07-11 | ✅ Current |
+| 3.1.1 | 2026-07-11 | ✅ Current |
+| 3.1.0 | 2026-07-11 | ⚠️ Superseded (search_content bug) |
 | 3.0.0 | 2024-01-19 | ⚠️ Deprecated |
 | 2.0.0 | 2024-01-10 | ⚠️ Deprecated |
 | 1.0.0 | 2024-01-01 | ⚠️ Deprecated |
@@ -206,8 +221,7 @@ Claude: show me my configuration
 
 ## Support
 
-- 📖 [README.md](README.md) - Overview
-- 📝 [INSTALLATION.md](INSTALLATION.md) - Setup guide
+- 📖 [README.md](README.md) - Overview, setup, and configuration
 - 🤝 [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute
 - 🔒 [SECURITY.md](SECURITY.md) - Security policy
 - 💬 [GitHub Issues](https://github.com/Mdskun/mcp-fs-agent/issues)

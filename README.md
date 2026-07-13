@@ -1,103 +1,128 @@
-# MCP Filesystem Agent v3
-
 <div align="center">
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+# 🗂️ MCP Filesystem Agent
 
-**Token-optimized Model Context Protocol (MCP) server for Claude and other AI models**
+### Token-efficient filesystem access for Claude — read, write, search, and analyze code without burning your context window
 
-[Quick Start](#quick-start) • [Installation](#installation) • [Features](#features) • [Documentation](#documentation) • [Contributing](#contributing)
+<p align="center">
+  <img src="FileAgent.png" alt="MCP Filesystem Agent" width="140" />
+</p>
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENCE)
+[![Version](https://img.shields.io/badge/version-3.1.1-blue.svg)](CHANGELOG.md)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
+[![MCPB](https://img.shields.io/badge/packaging-MCPB%200.3-6f42c1.svg)](manifest.json)
+[![GitHub stars](https://img.shields.io/github/stars/Mdskun/mcp-fs-agent?style=social)](https://github.com/Mdskun/mcp-fs-agent/stargazers)
+
+**[Quick Start](#-quick-start) · [Features](#-features) · [Configuration](#-configuration) · [Tech Stack](#-tech-stack) · [Contributing](#-contributing)**
 
 </div>
 
 ---
 
-## What Is This?
+## 📑 Table of Contents
 
-A production-ready MCP server that enables **Claude, Claude Desktop, and other AI models** to perform file operations with **95%+ token efficiency**. Perfect for code analysis, file management, and intelligent search across your projects.
-
-**Key Stats:**
-- 📊 **25+ file operations** (read, write, search, edit, analyze)
-- ⚡ **95% token savings** vs. naive file reading
-- 🔒 **Path-traversal protected** (segment-aware path validation, size limits, non-root execution)
-- 🐳 **Production Docker** with health checks and resource limits
-- 📝 **Comprehensive documentation** for all platforms
-- 🌍 **Multi-language support** (Python, JavaScript, Go, Rust)
-
----
-
-## Features
-
-### 🎯 Core Capabilities
-
-| Feature | Description | Token Savings |
-|---------|-------------|---|
-| **Smart Preview Reading** | Read first N lines instead of entire file | 95% savings |
-| **Chunked File Reading** | Handle files larger than context window | 80% savings |
-| **Code Analysis** | Extract functions/classes/imports via AST | 98% savings |
-| **Smart Search** | Search with context, not entire files | 90% savings |
-| **Batch Operations** | Read multiple files efficiently | 70% savings |
-| **Dry-Run Mode** | Preview edits before committing | 100% safety |
-
-### 📁 File Operations
-
-- ✅ Read files (full, preview, or chunked)
-- ✅ Write and append files
-- ✅ Create directories
-- ✅ List directories with metadata
-- ✅ Get directory tree structure
-
-### ✏️ Editing Operations
-
-- ✅ Find and replace (with dry-run preview)
-- ✅ Insert at specific lines
-- ✅ Delete line ranges
-- ✅ Safe operations with undo-friendly diffs
-
-### 🔍 Search & Discovery
-
-- ✅ Search by filename
-- ✅ Search by file extension
-- ✅ Search file contents
-- ✅ Regex pattern support
-- ✅ Context-aware results
-
-### 🐍 Code Analysis
-
-| Language | Functions | Classes | Imports | Accuracy |
-|----------|:---------:|:-------:|:-------:|----------|
-| Python | ✅ | ✅ | ✅ | 100% (AST) |
-| JavaScript | ✅ | ✅ | ✅ | 95% (Regex) |
-| Go | ✅ | ✅ | ✅ | 90% (Regex) |
-| Rust | ✅ | ✅ | ✅ | 88% (Regex) |
+- [Overview](#-overview)
+- [Features](#-features)
+- [Demo](#-demo)
+- [Tech Stack](#-tech-stack)
+- [Requirements](#-requirements)
+- [Quick Start](#-quick-start)
+- [Configuration](#-configuration)
+- [Packaging as a Desktop Extension](#-packaging-as-a-desktop-extension)
+- [How It Works](#-how-it-works)
+- [Project Structure](#-project-structure)
+- [Documentation](#-documentation)
+- [Security & Privacy](#-security--privacy)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Author](#-author)
 
 ---
 
-## Quick Start
+## 🔭 Overview
 
-### 1️⃣ Installation (2 minutes)
+Every time an LLM reads a whole file just to answer a small question, it burns thousands of tokens it didn't need. **MCP Filesystem Agent** is a [Model Context Protocol](https://modelcontextprotocol.io) server that gives Claude 22 purpose-built file operations — preview reads, chunked pagination, AST-based code search, dry-run edits — so it gets exactly the context it needs and nothing more.
+
+**The problem:** naive "read the whole file" tool-use patterns don't scale past a few hundred lines before they eat your context budget.
+
+**The solution:** structured, scoped operations — `read_file(preview_lines=50)` instead of dumping 2,000 lines; `search_code_structure()` instead of reading five files to find one function; `replace_text(dry_run=True)` so edits are previewed before they're committed.
+
+**Who it's for:** developers who want Claude to work directly across a real codebase or document tree — through Claude Desktop, Claude Code, or any MCP-compatible client — without babysitting what gets read.
+
+---
+
+## ✨ Features
+
+- 🎯 **Scoped by design** — access is limited to directories you explicitly allow, passed as CLI arguments exactly like the official filesystem MCP server. Nothing outside that scope is reachable.
+- ⚡ **Preview & chunked reads** — pull the first N lines or a specific byte-range chunk instead of an entire file, so large files don't blow the context window.
+- 🔍 **Multi-language code intelligence** — AST-accurate function/class/import extraction for Python, regex-based for JavaScript, Go, and Rust.
+- ✏️ **Dry-run edits** — preview a find-and-replace before committing it, so you see the diff before anything changes on disk.
+- 🧭 **Fast search, not full reads** — search by filename, extension, or content (plain text or regex) with contextual snippets instead of whole-file dumps.
+- 📦 **Batch reads with size guards** — read multiple related files in one call, capped so a batch can't quietly consume your whole budget.
+- 🐳 **Production Docker setup** — non-root user, resource limits, a real process healthcheck (not a no-op).
+- 🧪 **Actually tested** — path-safety, CLI-arg handling, and content search all have regression tests in `tests/`.
+
+---
+
+## 🖼️ Demo
+
+<p align="center">
+  <em>Once installed, Claude Desktop renders a native config screen generated directly from <code>manifest.json</code> — pick allowed directories, and tools are auto-grouped into "Read-only" vs. "Write/destructive" based on each tool's annotations.</em>
+</p>
+
+```
+You: What's in my project, and does it have any TODOs left?
+
+Claude uses: get_tree(path=".", max_depth=2)
+             search_content(query="TODO")
+
+Result: A directory tree plus every TODO with file and line number —
+        without Claude reading a single full file.
+```
+
+---
+
+## 🧱 Tech Stack
+
+| Technology | Purpose |
+|---|---|
+| **Python 3.8+** | Core implementation — a single, dependency-light module |
+| **[MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)** (`FastMCP`) | Tool registration, annotations, and the stdio transport Claude speaks |
+| **Pydantic** *(via `mcp`)* | Tool annotation schema (`ToolAnnotations`) |
+| **`ast` (stdlib)** | 100%-accurate Python function/class/import extraction |
+| **`re` (stdlib)** | Regex-based structure extraction for JS/Go/Rust, and regex search mode |
+| **Docker** | Optional containerized deployment, non-root, healthchecked |
+| **MCPB** (`manifest_version 0.3`) | Packaging format for Claude Desktop's Extensions / Connectors Directory |
+| **pytest** | Regression tests for path safety, CLI config, and content search |
+
+---
+
+## 📋 Requirements
+
+| | |
+|---|---|
+| **OS** | Linux, macOS, Windows |
+| **Python** | 3.8 or newer |
+| **RAM** | ~50MB base |
+| **Network** | None — fully local, no outbound calls |
+| **Docker** *(optional)* | 20.10+ with Compose 1.29+ |
+
+---
+
+## 🚀 Quick Start
 
 ```bash
-# Clone the repository
+# 1. Clone
 git clone https://github.com/Mdskun/mcp-fs-agent.git
 cd mcp-fs-agent
 
-# Install dependencies
+# 2. Install dependencies
 pip install -r requirements.txt
-```
 
-### 2️⃣ Run (30 seconds)
-
-Pass the directory you want Claude to access as an argument — no
-configuration step needed:
-
-```bash
+# 3. Run — pass the directory Claude should access as an argument
 python server3.py /path/to/your/projects
 ```
-
-(Prefer environment variables instead? `export MCP_BASE_DIR=/path/to/your/projects`
-then run `python server3.py` with no arguments — see [Configuration](#configuration).)
 
 You should see:
 ```
@@ -106,14 +131,13 @@ You should see:
 ============================================================
 📁 BASE DIRECTORIES (1):
    1. /path/to/your/projects
-
-✨ Features: 25 file operations, token-optimized, production-ready
 ============================================================
 ```
 
-### 3️⃣ Use with Claude
+### Connect it to Claude Desktop
 
-**Option A: Claude Desktop (Recommended)**
+Add to your `claude_desktop_config.json`:
+
 ```json
 {
   "mcpServers": {
@@ -125,273 +149,211 @@ You should see:
 }
 ```
 
-Add more allowed directories by listing more paths as additional args —
-exactly like the official filesystem MCP server:
+Restart Claude Desktop. Add more allowed directories by listing more paths in `args` — one server, multiple scoped roots.
 
-```json
-"args": [
-  "/path/to/mcp-fs-agent/server3.py",
-  "/path/to/projects",
-  "/path/to/documents"
-]
+### Run it in Docker instead
+
+```bash
+docker-compose up -d
+docker-compose logs -f     # watch it start
+docker-compose down        # stop it
 ```
 
-**Option B: Claude.ai (Web)**
-- Use Claude's settings to add this MCP server
-- See [INSTALLATION.md](INSTALLATION.md) for detailed steps
+### Prefer a system service?
+
+<details>
+<summary><strong>Linux (systemd)</strong></summary>
+
+```ini
+# /etc/systemd/system/mcp-fs-agent.service
+[Unit]
+Description=MCP Filesystem Agent
+After=network.target
+
+[Service]
+Type=simple
+User=your-username
+Environment="MCP_BASE_DIR=/home/your-username/projects"
+ExecStart=/home/your-username/mcp-fs-agent/venv/bin/python /home/your-username/mcp-fs-agent/server3.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now mcp-fs-agent
+```
+</details>
+
+<details>
+<summary><strong>Windows (nssm)</strong></summary>
+
+```cmd
+nssm install mcp-fs-agent "C:\path\to\venv\Scripts\python.exe" "C:\path\to\server3.py" "C:\Users\YourName\Projects"
+nssm start mcp-fs-agent
+```
+</details>
+
+<details>
+<summary><strong>Troubleshooting</strong></summary>
+
+| Symptom | Fix |
+|---|---|
+| `No module named 'mcp'` | `pip install -r requirements.txt` |
+| `Access denied: Path outside allowed directories` | Double-check the path passed as a CLI arg or `MCP_BASE_DIR` |
+| Claude doesn't see the server | Fully quit and reopen Claude Desktop (a reload isn't enough) |
+| Out of memory on a huge file | Use `read_file_chunked()` instead of `read_file()` |
+</details>
 
 ---
 
-## Installation
+## ⚙️ Configuration
 
-### Platform-Specific Guides
-
-- 🖥️ **[Linux/macOS](INSTALLATION.md#linuxmacos)**
-- 🪟 **[Windows](INSTALLATION.md#windows)**
-- 🐳 **[Docker](INSTALLATION.md#docker)**
-- 🖌️ **[Claude Desktop](INSTALLATION.md#claude-desktop)**
-- 🌐 **[Claude Web (claude.ai)](INSTALLATION.md#claudeai-web)**
-
-See **[INSTALLATION.md](INSTALLATION.md)** for complete setup instructions.
-
----
-
-## Usage Examples
-
-### Example 1: Read File with Preview (Token-Efficient)
-
-```
-You: Read the first 50 lines of config.py
-
-Claude uses: read_file(path="config.py", preview_lines=50)
-Result: Gets 50 lines instead of entire file (95% token savings!)
-```
-
-### Example 2: Smart Code Analysis
-
-```
-You: Show me all functions in the project
-
-Claude uses: search_code_structure(search_type="functions")
-Result: Finds 150+ functions without reading any files (98% savings!)
-```
-
-### Example 3: Safe Find & Replace
-
-```
-You: Replace "localhost" with "127.0.0.1" but show me first
-
-Claude uses: replace_text(..., dry_run=True)
-Result: Preview shows exact changes before committing (100% safety!)
-```
-
-### Example 4: Regex Search
-
-```
-You: Find all async functions in Python code
-
-Claude uses: search_content(query="^async def", use_regex=True)
-Result: Finds 12 async functions with context (90% token savings!)
-```
-
-### Example 5: Connect and Use in One Go
-
-```json
-// claude_desktop_config.json
-{
-  "mcpServers": {
-    "filesystem-agent": {
-      "command": "python",
-      "args": [
-        "/home/you/mcp-fs-agent/server3.py",
-        "/home/you/projects/my-app"
-      ]
-    }
-  }
-}
-```
-
-Restart Claude Desktop, then:
-
-```
-You: What's in my project, and does it have any TODOs left?
-
-Claude uses: get_tree(path=".", max_depth=2)
-             search_content(query="TODO", use_regex=False)
-
-Result: A directory tree plus every TODO comment with file and line
-number — without Claude reading a single full file.
-```
-
-Because `/home/you/projects/my-app` was the only path passed in `args`,
-that's the only directory this server can touch — same access model as
-the official filesystem MCP server.
-
-
-
----
-
-## Documentation
-
-- 📖 **[INSTALLATION.md](INSTALLATION.md)** - Complete setup guide
-- 🤝 **[CONTRIBUTING.md](CONTRIBUTING.md)** - How to contribute
-- 📝 **[CHANGELOG.md](CHANGELOG.md)** - Version history
-- 🔒 **[SECURITY.md](SECURITY.md)** - Security policy
-
----
-
-## Performance Benchmarks
-
-Real-world token efficiency measurements:
-
-| Operation | Without Optimization | With Agent | Savings |
-|-----------|---------------------|------------|---------|
-| Read 1000-line file | 25,000 tokens | 1,250 tokens | **95%** |
-| Search codebase | 50,000 tokens | 1,000 tokens | **98%** |
-| Analyze code structure | 30,000 tokens | 600 tokens | **98%** |
-| Batch read 10 files | 100,000 tokens | 30,000 tokens | **70%** |
-
-**Real savings depend on usage patterns. These are typical scenarios.**
-
----
-
-## Security Features
-
-✅ **Path Validation** - Prevents directory traversal attacks  
-✅ **Symlink Safety** - Validates symlink targets  
-✅ **Binary Protection** - Won't read binary files as text  
-✅ **Size Limits** - Prevents memory exhaustion  
-✅ **Non-Root Execution** - Runs as unprivileged user in Docker  
-✅ **Input Validation** - All user inputs sanitized  
-
-See [SECURITY.md](SECURITY.md) for details.
-
----
-
-## Privacy Policy
-
-This server does not collect, transmit, or store any data outside your own
-machine. It has no network client code, no telemetry, and no third-party
-integrations — it only reads and writes files within the directories you
-configure via `MCP_BASE_DIR` / `MCP_BASE_DIRS`. Local diagnostic logs go to
-`stderr` only, never leave your machine, and never contain file contents.
-
-Full policy, including data retention and contact information:
-**[PRIVACY.md](PRIVACY.md)**
-
----
-
-## Configuration
-
-### Simplest: Command-Line Arguments (Recommended)
-
-Pass one or more allowed directories directly as arguments — this is the
-same pattern used by the official filesystem MCP server:
+### Simplest: command-line arguments (recommended)
 
 ```bash
 python server3.py /path/to/projects
-python server3.py /path/to/projects /path/to/documents /data/external
+python server3.py /path/to/projects /path/to/documents /data/external   # multiple roots
 ```
 
-In a connector config (Claude Desktop, etc.), this is just:
-
-```json
-{
-  "command": "python",
-  "args": ["/path/to/server3.py", "/path/to/projects"]
-}
-```
-
-### Alternative: Environment Variables
-
-If you'd rather not put paths in the `args` list, environment variables
-still work exactly as before:
+### Alternative: environment variables
 
 | Variable | Default | Description |
-|----------|---------|-------------|
-| `MCP_BASE_DIR` | `~/Data/Repos` | Base directory for file operations |
-| `MCP_BASE_DIRS` | (not set) | Multiple paths (comma-separated) |
-| `PYTHONUNBUFFERED` | `1` | Unbuffered output |
+|---|---|---|
+| `MCP_BASE_DIR` | `~/Data/Repos` | Single allowed directory |
+| `MCP_BASE_DIRS` | *(not set)* | Comma-separated list of allowed directories |
+| `PYTHONUNBUFFERED` | `1` | Unbuffered stderr output (recommended) |
 
-### Customizable Limits
+Priority order: **CLI args → `MCP_BASE_DIRS` → `MCP_BASE_DIR` → default.**
 
-Edit `server3.py` to adjust (lines 40-50):
+### Tunable limits
+
+Edit near the top of `server3.py`:
 
 ```python
-MAX_FILE_SIZE_KB = 2000          # Max single file (2MB)
-MAX_RESULTS = 50                 # Max search results
-DEFAULT_CHUNK_SIZE_KB = 50       # Chunk size for large files
-TOTAL_BATCH_SIZE_KB = 5000       # Max for batch operations
+MAX_FILE_SIZE_KB   = 2000   # single-file read/write cap (2MB)
+MAX_RESULTS        = 50     # max search results returned
+DEFAULT_CHUNK_SIZE_KB = 50  # chunk size for read_file_chunked()
+TOTAL_BATCH_SIZE_KB = 5000  # cap for batch_read_files()
+MAX_LINES_TO_SEARCH = 10000 # cap for search_content()
 ```
 
 ---
 
-## Requirements
+## 📦 Packaging as a Desktop Extension
 
-- **Python:** 3.8+
-- **RAM:** 50MB base (configurable for large files)
-- **Disk:** Just the application files
-- **Network:** None (local operations only)
+The repo ships `manifest.json` (MCPB spec `0.3`) so it can be packaged as a `.mcpb` bundle and installed as a Claude Desktop extension — this is what renders the native "Allowed Directories" config screen.
 
-### Optional (for Docker)
-- **Docker:** 20.10+
-- **Docker Compose:** 1.29+
+```bash
+# 1. Bundle the mcp dependency using the *exact* interpreter that will run it
+/usr/bin/python3 -m pip install "mcp>=1.9,<2" --target=server/lib
 
----
+# 2. Install the MCPB CLI
+npm install -g @anthropic-ai/mcpb
 
-## Quality Notes
+# 3. Validate, then pack
+mcpb validate manifest.json
+mcpb pack .
+```
 
-These scores are the author's own assessment, not an independent audit —
-take them as a rough guide, not a certification.
+> **Interpreter mismatch is the #1 failure mode.** `pydantic_core` ships a compiled binary — if you `pip install --target=server/lib` from a venv or conda environment that isn't the exact Python Claude Desktop launches (usually `/usr/bin/python3`), you'll get `ModuleNotFoundError: No module named 'pydantic_core._pydantic_core'` at runtime. Always install with the target interpreter itself (`/usr/bin/python3 -m pip install ...`, not a bare `pip install ...`).
 
-| Area | Notes |
-|------|-------|
-| Code Quality | Single-file implementation, consistent response types, docstrings on every tool |
-| Security | Path-traversal check uses segment-aware `Path.relative_to()`; covered by regression tests in `tests/` |
-| Documentation | Install guide, contributing guide, security policy, and privacy policy included |
-| Testing | Basic regression tests for path safety exist in `tests/`; broader coverage (write/edit tools) is still a gap |
+Install the resulting `.mcpb` in Claude Desktop, test it against a disposable directory first, then submit via the Desktop Extension form (a separate path from the Connectors Directory portal, which is for remote HTTPS servers only).
 
 ---
 
-## Contributing
+## 🧠 How It Works
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
-- Development setup
-- Testing guidelines
-- Code style requirements
-- Pull request process
+**User flow:**
+1. You point the server at one or more directories (CLI args, env var, or the Desktop Extension's directory picker).
+2. Claude calls a tool — say, `search_content(query="TODO")`.
+3. Every path is resolved and checked against the allowed directories before any file touches disk.
+4. A compact, structured `ToolResponse` comes back — not a raw file dump.
 
----
+**Internally:**
 
-## License
+```
+Claude ──▶ FastMCP tool call ──▶ safe_path() validation ──▶ file operation ──▶ ToolResponse
+                                       │
+                                       └─ segment-aware check via Path.relative_to()
+                                          (rejects sibling-directory & ../ traversal)
+```
 
-MIT License - Feel free to use, modify, and distribute.
-
-See [LICENSE](LICENSE) for details.
-
----
-
-## Support
-
-- 📖 Check [INSTALLATION.md](INSTALLATION.md) first
-- 🐛 Open an issue on GitHub
-- 💬 Check existing issues
-- 🔒 For security issues, see [SECURITY.md](SECURITY.md)
+There's no framework pattern here beyond "one function per tool" — it's a single, flat module by design, prioritizing readability over abstraction for a project this size.
 
 ---
 
-## Acknowledgments
+## 📁 Project Structure
 
-Built with modern Python best practices and enterprise-grade security standards.
+```
+mcp-fs-agent/
+├── server3.py              # The entire server — all 22 tools, one file
+├── manifest.json           # MCPB packaging manifest (Desktop Extension config)
+├── requirements.txt        # Runtime dependency (mcp SDK)
+├── .mcpbignore             # Excludes venv/tests/docs from the packed bundle
+├── Dockerfile              # Non-root, healthchecked container build
+├── docker-compose.yml      # One-command Docker deployment
+├── PRIVACY.md              # Data-handling policy (required for submission)
+├── SECURITY.md             # Security features, known limitations, disclosure process
+├── CHANGELOG.md            # Version history, including real fixes (not just features)
+├── CONTRIBUTING.md         # Dev setup, tool template, PR process
+└── tests/
+    ├── test_safe_path.py       # Path-traversal regression tests
+    ├── test_cli_args.py        # CLI-arg config priority tests
+    └── test_search_content.py  # Content-search matching regression tests
+```
 
 ---
+
+## 📚 Documentation
+
+- 📝 **[CHANGELOG.md](CHANGELOG.md)** — every version, including the real bugs that got fixed (a string-prefix path check, a broken match object in search) — not just a feature list.
+- 🔒 **[SECURITY.md](SECURITY.md)** — security model, Docker hardening, and how to report a vulnerability.
+- 🔐 **[PRIVACY.md](PRIVACY.md)** — what data this touches (nothing leaves your machine).
+- 🤝 **[CONTRIBUTING.md](CONTRIBUTING.md)** — dev setup, the required tool-annotation pattern, commit conventions.
+
+---
+
+## 🔒 Security & Privacy
+
+- **Path validation** is segment-aware (`Path.relative_to()`), not a naive string-prefix check — sibling directories that share a name prefix with an allowed folder can't be reached.
+- **Zero network calls.** No telemetry, no analytics, nothing sent anywhere. See [PRIVACY.md](PRIVACY.md) for the full policy.
+- **Every tool is annotated** (`readOnlyHint` / `destructiveHint`) so Claude Desktop can correctly group and gate write/destructive operations from read-only ones.
+
+Full details in [SECURITY.md](SECURITY.md).
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome — especially test coverage for the write/edit tools, which is the biggest known gap right now.
+
+```bash
+git checkout -b feature/your-feature-name
+# make changes, add tests
+pytest tests/ -v
+```
+
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full dev setup, the required tool-annotation pattern for new tools, and PR conventions.
+
+---
+
+## 📄 License
+
+Released under the **[MIT License](LICENCE)** — use it, modify it, ship it.
+
+---
+
+## 👤 Author
+
+**Manthan** ([@Mdskun](https://github.com/Mdskun))
+
+If this saved you a context window or two, a ⭐ on the repo is the easiest way to say thanks.
 
 <div align="center">
 
-**[⬆ back to top](#mcp-filesystem-agent-v3)**
-
-Made with ❤️ for Claude and AI developers
-
-**[Star on GitHub](https://github.com/Mdskun/mcp-fs-agent)** | **[Report Issue](https://github.com/Mdskun/mcp-fs-agent/issues)**
+**[⬆ Back to top](#-mcp-filesystem-agent)**
 
 </div>
