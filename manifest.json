@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.3",
   "name": "filesystem-agent",
-  "display_name": "Filesystem",
+  "display_name": "Filesystem-agent",
   "icon": "FileAgent.png",
   "version": "3.1.1",
   "description": "Token-optimized filesystem agent for reading, writing, searching, and analyzing files with minimal token usage.",
