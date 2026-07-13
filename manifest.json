@@ -7,10 +7,10 @@
   "description": "Token-optimized filesystem agent for reading, writing, searching, and analyzing files with minimal token usage.",
   "long_description": "Gives Claude 22 file operations (read, write, search, edit, and code-structure analysis) scoped to directories you explicitly allow. Built for token efficiency: previews, chunked reads, and dry-run edits avoid dumping whole files into context. Runs entirely on your machine — no network calls, no telemetry.",
   "author": { "name": "Manthan" },
-  "repository": { "type": "git", "url": "https://github.com/Mdskun/mcp-fs-agent.git" },
-  "homepage": "https://github.com/Mdskun/mcp-fs-agent",
-  "documentation": "https://github.com/Mdskun/mcp-fs-agent/blob/main/INSTALLATION.md",
-  "support": "https://github.com/Mdskun/mcp-fs-agent/issues",
+  "repository": { "type": "git", "url": "https://github.com/Mdskun/MCP-Filesystem-Agent.git" },
+  "homepage": "https://github.com/Mdskun/MCP-Filesystem-Agent",
+  "documentation": "https://github.com/Mdskun/MCP-Filesystem-Agent/blob/main/INSTALLATION.md",
+  "support": "https://github.com/Mdskun/MCP-Filesystem-Agent/issues",
   "license": "MIT",
   "keywords": ["filesystem", "mcp", "files", "search", "code-analysis", "token-efficient"],
   "server": {
@@ -61,6 +61,6 @@
     { "name": "search_code_structure", "description": "Find functions, classes, and imports across Python, JavaScript, Go, and Rust" }
   ],
   "privacy_policies": [
-    "https://github.com/Mdskun/mcp-fs-agent/blob/main/PRIVACY.md"
+    "https://github.com/Mdskun/MCP-Filesystem-Agent/blob/main/PRIVACY.md"
   ]
 }
